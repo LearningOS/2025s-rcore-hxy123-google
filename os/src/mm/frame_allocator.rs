@@ -9,6 +9,7 @@ use core::fmt::{self, Debug, Formatter};
 use lazy_static::*;
 
 /// tracker for physical page frame allocation and deallocation
+///不报的话其实PHysPageNUm其实就是一个usize
 pub struct FrameTracker {
     /// physical page number
     pub ppn: PhysPageNum,

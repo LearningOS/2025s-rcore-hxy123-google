@@ -63,7 +63,7 @@ impl MemorySet {
             None,
         );
     }
-    fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
+    fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {//MemorySet的push->map_area的map->map_area的map_one把一段中所有虚拟地址都做了对应物理地址
         map_area.map(&mut self.page_table);
         if let Some(data) = data {
             map_area.copy_data(&mut self.page_table, data);
@@ -309,7 +309,7 @@ impl MapArea {
         }
         page_table.unmap(vpn);
     }
-    pub fn map(&mut self, page_table: &mut PageTable) {
+    pub fn map(&mut self, page_table: &mut PageTable) {//对于一逻辑段中的每一个虚拟地址都map一个物理地址给他并放在page_table中
         for vpn in self.vpn_range {
             self.map_one(page_table, vpn);
         }
@@ -336,7 +336,7 @@ impl MapArea {
     }
     /// data: start-aligned but maybe with shorter length
     /// assume that all frames were cleared before
-    pub fn copy_data(&mut self, page_table: &mut PageTable, data: &[u8]) {
+    pub fn copy_data(&mut self, page_table: &mut PageTable, data: &[u8]) {//把data数据依次存到内存中
         assert_eq!(self.map_type, MapType::Framed);
         let mut start: usize = 0;
         let mut current_vpn = self.vpn_range.get_start();

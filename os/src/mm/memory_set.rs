@@ -7,6 +7,7 @@ use super::{StepByOne, VPNRange};
 use crate::config::{
     KERNEL_STACK_SIZE, MEMORY_END, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT_BASE, USER_STACK_SIZE,
 };
+//use crate::mm::memory_set;
 use crate::sync::UPSafeCell;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
@@ -37,14 +38,98 @@ lazy_static! {
 pub struct MemorySet {
     page_table: PageTable,
     areas: Vec<MapArea>,
+    mmap_tree: BTreeMap<VirtPageNum, FrameTracker>,
 }
 
 impl MemorySet {
+    ///mmap
+    pub fn mmap(&mut self,_start:usize,_len:usize,prot:usize) ->isize{
+        if _len==0 {return 0;}
+        let va_start = VirtAddr::from(_start);
+        let  len=_len-1;
+        if !va_start.aligned(){
+            println!("mmap: start address is not aligned to page size");
+            return -1;
+        }
+        let mut va_start_page = va_start.floor();
+        //补充权限判断
+        if prot & !0x7 != 0{
+            return -1;
+            
+        }
+        if prot & 0x7 == 0{
+            return -1;
+        }
+        let mut flag= PTEFlags::empty();
+        if prot&0b0000_0001!=0{
+            flag |= PTEFlags::R;
+        }
+        if prot&0b0000_0010!=0{
+            flag |= PTEFlags::W;
+        }
+        if prot&0b0000_0100!=0{
+            flag |= PTEFlags::X;
+        }
+        flag |= PTEFlags::U;
+        flag |= PTEFlags::V;
+        let va_end_page=VirtAddr::from(_start + len).floor();
+        // println!("mmap: start:{:#x}, len:{:#x}", _start, _len);
+        // println!("va_start_page: {:#x}, va_end_page: {:#x}", va_start_page.0, va_end_page.0);
+        while va_start_page<=va_end_page {
+            if  let Some(pte)= self.page_table.translate(va_start_page) {
+                if pte.is_valid(){
+                    println!("this page is already mapped");
+                    return -1;
+                }
+            }
+            if let Some(ppn)= frame_alloc(){
+                self.page_table.map(
+                    va_start_page,
+                    ppn.ppn,
+                    flag
+                );
+                self.mmap_tree.insert(va_start_page,ppn);
+
+            }else{
+                println!("mmap: no free frame available");
+                return -1;
+            }
+            va_start_page.step();
+        }
+        0
+    }
+    ///unmap
+    pub fn munmap(&mut self,start:usize, _len:usize) -> isize {
+        if _len==0 {return 0;}
+        let len=_len-1;
+        let va_start = VirtAddr::from(start);
+        if !va_start.aligned() {
+            println!("unmap: start address is not aligned to page size");
+            return -1;
+        }
+        let mut va_start_page = va_start.floor();
+        let va_end_page = VirtAddr::from(start + len).floor();
+        while va_start_page<=va_end_page{
+            if  let Some(pte)= self.page_table.translate(va_start_page) {
+                if !pte.is_valid(){
+                    println!("this page is not mapped");
+                    return -1;
+                }
+            }else{
+                return -1;
+            }
+            self.page_table.unmap(va_start_page);
+            self.mmap_tree.remove(&va_start_page);
+            va_start_page.step();
+        }
+        0
+    }
     /// Create a new empty `MemorySet`.
     pub fn new_bare() -> Self {
         Self {
             page_table: PageTable::new(),
             areas: Vec::new(),
+            mmap_tree: BTreeMap::new(),
         }
     }
     /// Get the page table token

@@ -153,6 +153,16 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
+    fn mmap(&self,start: usize, len: usize, port: usize)->isize{
+        let mut inner=self.inner.exclusive_access();
+        let current_task_id=inner.current_task;
+        inner.tasks[current_task_id].memory_set.mmap(start, len, port)
+    }
+    fn munmap(&self,start: usize, len: usize)->isize{
+        let mut inner=self.inner.exclusive_access();
+        let current_task_id=inner.current_task;
+        inner.tasks[current_task_id].memory_set.munmap(start, len)
+    }
 }
 
 /// Run the first task in task list.
@@ -201,4 +211,14 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
 /// Change the current 'Running' task's program break
 pub fn change_program_brk(size: i32) -> Option<usize> {
     TASK_MANAGER.change_current_program_brk(size)
+}
+///mmap
+pub fn select_mmap(start: usize, len: usize, port: usize) -> isize {
+    TASK_MANAGER.mmap(start,len,port)
+    // TASK_MANAGER.inner.exclusive_access().tasks[].memory_set.mmap(start, len, port)
+}
+///ummap
+pub fn select_munmap(start: usize, len: usize) -> isize {
+    TASK_MANAGER.munmap(start, len)
+    // TASK_MANAGER.inner.exclusive_access().tasks[].memory_set.ummap(start, len)
 }

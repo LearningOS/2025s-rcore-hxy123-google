@@ -163,6 +163,12 @@ impl TaskManager {
         let current_task_id=inner.current_task;
         inner.tasks[current_task_id].memory_set.munmap(start, len)
     }
+    fn increase_system_calls(&self,syscall_id: usize)  {
+        let mut inner=self.inner.exclusive_access();
+        let current_task_id=inner.current_task;
+        inner.tasks[current_task_id].syscall_times[syscall_id]+=1;
+
+    }
 }
 
 /// Run the first task in task list.
@@ -222,3 +228,9 @@ pub fn select_munmap(start: usize, len: usize) -> isize {
     TASK_MANAGER.munmap(start, len)
     // TASK_MANAGER.inner.exclusive_access().tasks[].memory_set.ummap(start, len)
 }
+/// increase system calls
+pub fn increase_system_calls(syscall_id: usize) {
+    TASK_MANAGER.increase_system_calls(syscall_id);
+
+}
+

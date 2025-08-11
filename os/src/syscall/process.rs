@@ -1,7 +1,8 @@
 //! Process management syscalls
 //use core::mem;
 
-use crate::{task::{change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, select_mmap,select_munmap}};
+use crate::{ task::{change_program_brk, exit_current_and_run_next, select_mmap, select_munmap, suspend_current_and_run_next,
+vaddr_to_paddr_r,vaddr_to_paddr_w,get_current_syscall_time}};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -36,8 +37,32 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
 /// HINT: You might reimplement it with virtual memory management.
 pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
     trace!("kernel: sys_trace");
-  
-    -1
+    match _trace_request{
+        0 => unsafe {
+           //(_id as *const u8 ).read_volatile() as isize
+           let p_addr=vaddr_to_paddr_r(_id);
+           if p_addr==-1{
+            return -1;
+           }
+           let p_addr_u8=p_addr as *const u8;
+           p_addr_u8.read_volatile() as isize
+        },
+        1 => unsafe {
+            let p_addr=vaddr_to_paddr_w(_id);
+            if p_addr==-1{
+            return -1;
+           }
+            (p_addr as *mut u8 ).write_volatile(_data as u8);
+            0
+        },
+        2=> {get_current_syscall_time(_id) as isize},
+        _ => {
+            
+            -1
+        }
+
+    }
+    
 }
 
 // YOUR JOB: Implement mmap.

@@ -54,35 +54,11 @@ impl MemorySet {
                     return -1;
                 }
                 let off_set=vaddr.page_offset();
-                let page_addr:usize=p_page.into();
-                let p_addr=page_addr+off_set;
+                let p_addr=p_page.get_bytes_array()[off_set];
                 return p_addr as isize;
             }else{
                 return -1;
 
-            }
-        }else{
-            return -1;
-        }
-
-    }
-    ///vaddr_to_paddr_w
-    pub fn get_paddr_w(&self, vaddr: VirtAddr,) ->isize{
-        if let Some(pte)=self.page_table.translate(vaddr.floor()){
-            if pte.is_valid(){
-                let p_page= pte.ppn();
-                if !pte.writable(){
-                    return -1;
-                }
-                if !pte.userable(){
-                    return -1;
-                }
-                let off_set=vaddr.page_offset();
-                let page_addr:usize=p_page.into();
-                let p_addr=page_addr+off_set;
-                return p_addr as isize;
-            }else{
-                return -1 
             }
         }else{
             return -1;

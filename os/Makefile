@@ -11,6 +11,12 @@ BOARD := qemu
 SBI ?= rustsbi
 BOOTLOADER := ../bootloader/$(SBI)-$(BOARD).bin
 
+BIN := os
+ELF := target/$(TARGET)/$(MODE)/$(BIN)
+
+# GDB wrapper to handle virtual path to core lib and types display in Rust
+GDB_PATH :=/home/hxy/Desktop/thu/gdb-14.2/build/bin/riscv64-unknown-elf-gdb
+gdb := RUST_GDB=$(GDB_PATH) rust-gdb
 # Building mode argument
 ifeq ($(MODE), release)
 	MODE_ARG := --release
@@ -79,5 +85,12 @@ gdbserver: build
 
 gdbclient:
 	@riscv64-unknown-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'
+
+gdb:
+	@tmux new-session -d \
+		"qemu-system-riscv64 -machine virt -nographic -bios $(BOOTLOADER) -device loader,file=$(ELF),addr=$(KERNEL_ENTRY_PA) -s -S" && \
+		tmux split-window -h "$(gdb) -ex 'file $(ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
+		tmux swap-pane -U && \
+		tmux -2 attach-session -d
 
 .PHONY: build env kernel clean disasm disasm-vim run-inner gdbserver gdbclient

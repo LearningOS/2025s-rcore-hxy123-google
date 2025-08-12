@@ -175,11 +175,6 @@ impl TaskManager {
         let current_task_id=inner.current_task;
         inner.tasks[current_task_id].memory_set.get_paddr_r(VirtAddr::from(vaddr))
     }
-    fn vaddr_to_paddr_w(&self,vaddr:usize)->isize{
-        let   inner=self.inner.exclusive_access();
-        let current_task_id=inner.current_task;
-        inner.tasks[current_task_id].memory_set.get_paddr_w(VirtAddr::from(vaddr))
-    }
     fn get_current_syscall_time(&self,_id:usize)->usize{
         let inner=self.inner.exclusive_access();
         let current_task_id=inner.current_task;
@@ -253,10 +248,8 @@ pub fn increase_system_calls(syscall_id: usize) {
 pub fn vaddr_to_paddr_r(vaddr:usize)->isize{
     TASK_MANAGER.vaddr_to_paddr_r(vaddr)
 }
-///vaddr->paddr_w
-pub fn vaddr_to_paddr_w(vaddr:usize)->isize{
-    TASK_MANAGER.vaddr_to_paddr_w(vaddr)
-}
+
+
 ///get current syscall time
 pub fn get_current_syscall_time(_id:usize)->usize{
     TASK_MANAGER.get_current_syscall_time(_id)

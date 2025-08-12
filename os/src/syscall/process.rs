@@ -1,9 +1,10 @@
 //! Process management syscalls
-//use core::mem;
+use core::mem;
 
 use crate::{ task::{change_program_brk, exit_current_and_run_next, select_mmap, select_munmap, suspend_current_and_run_next,
-vaddr_to_paddr_r,vaddr_to_paddr_w,get_current_syscall_time}};
-
+vaddr_to_paddr_r,get_current_syscall_time,current_user_token}};
+use crate::mm::translated_byte_buffer;
+use crate::timer::get_time_us;
 #[repr(C)]
 #[derive(Debug)]
 pub struct TimeVal {
@@ -30,7 +31,27 @@ pub fn sys_yield() -> isize {
 /// HINT: What if [`TimeVal`] is splitted by two pages ?
 pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
     trace!("kernel: sys_get_time");
-    -1
+    let us = get_time_us();
+    //let ts = translated_struct_ptr(current_user_token(), _ts,
+    //mem::size_of::<TimeVal>());
+    let ts_vec=translated_byte_buffer(current_user_token(),
+    _ts as *const u8,
+    mem::size_of::<TimeVal>());
+    let ref temp_time=TimeVal{
+        sec: us / 1_000_000,      
+        usec: us % 1_000_000,
+    };
+    let src_ptr = temp_time as *const TimeVal;
+    for(idx,dst) in ts_vec.into_iter().enumerate(){
+        let _len=(*dst).len();
+        unsafe{dst.copy_from_slice(core::slice::from_raw_parts(
+            src_ptr .wrapping_byte_add(idx * _len) as *const u8, _len));}
+    }
+    0
+
+
+
+    
 }
 
 /// TODO: Finish sys_trace to pass testcases
@@ -38,22 +59,13 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
 pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
     trace!("kernel: sys_trace");
     match _trace_request{
-        0 => unsafe {
+        0 => {
            //(_id as *const u8 ).read_volatile() as isize
            let p_addr=vaddr_to_paddr_r(_id);
-           if p_addr==-1{
-            return -1;
-           }
-           let p_addr_u8=p_addr as *const u8;
-           p_addr_u8.read_volatile() as isize
+           p_addr as isize
         },
         1 => unsafe {
-            let p_addr=vaddr_to_paddr_w(_id);
-            if p_addr==-1{
-            return -1;
-           }
-            (p_addr as *mut u8 ).write_volatile(_data as u8);
-            0
+            
         },
         2=> {get_current_syscall_time(_id) as isize},
         _ => {

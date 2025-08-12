@@ -65,6 +65,29 @@ impl MemorySet {
         }
 
     }
+     ///vaddr_to_paddr_w
+    pub fn get_paddr_w(&self, vaddr: VirtAddr,) ->isize{
+        if let Some(pte)=self.page_table.translate(vaddr.floor()){
+            if pte.is_valid(){
+                let p_page= pte.ppn();
+                if !pte.writable(){
+                    return -1;
+                }
+                if !pte.userable(){
+                    return -1;
+                }
+                let off_set=vaddr.page_offset();
+                let p_addr=PhysAddr::from(p_page);
+                return (p_addr.0+off_set) as isize;
+            }else{
+                return -1 ;
+
+            }
+        }else{
+            return -1;
+        }
+
+    }
     ///mmap
     pub fn mmap(&mut self,_start:usize,_len:usize,prot:usize) ->isize{
         if _len==0 {return 0;}

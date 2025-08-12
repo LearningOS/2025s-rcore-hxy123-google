@@ -2,7 +2,7 @@
 use core::mem;
 
 use crate::{ task::{change_program_brk, exit_current_and_run_next, select_mmap, select_munmap, suspend_current_and_run_next,
-vaddr_to_paddr_r,get_current_syscall_time,current_user_token}};
+vaddr_to_paddr_r, vaddr_to_paddr_w,get_current_syscall_time,current_user_token}};
 use crate::mm::translated_byte_buffer;
 use crate::timer::get_time_us;
 #[repr(C)]
@@ -44,7 +44,7 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
     let src_ptr = temp_time as *const TimeVal;
     for(idx,dst) in ts_vec.into_iter().enumerate(){
         let _len=(*dst).len();
-        unsafe{dst.copy_from_slice(core::slice::from_raw_parts(
+        unsafe{(*dst).copy_from_slice(core::slice::from_raw_parts(
             src_ptr .wrapping_byte_add(idx * _len) as *const u8, _len));}
     }
     0
@@ -65,6 +65,11 @@ pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
            p_addr as isize
         },
         1 => unsafe {
+            let data1=_data as u8;
+            let p_page=vaddr_to_paddr_w(_id);
+            if p_page==-1 {return -1};
+            
+            0
             
         },
         2=> {get_current_syscall_time(_id) as isize},

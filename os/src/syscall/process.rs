@@ -65,10 +65,9 @@ pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
            p_addr as isize
         },
         1 => unsafe {
-            let data1=_data as u8;
             let p_page=vaddr_to_paddr_w(_id);
             if p_page==-1 {return -1};
-            
+            (p_page as *mut u8 ).write_volatile(_data as u8);
             0
             
         },
